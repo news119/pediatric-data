@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>우리 동네 어린이 1만 명당 소아청소년과 전문의는 몇 명일까</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+<style>
+:root{
+  --bg:#F5F8FB; --paper:#FFFFFF; --ink:#16233A; --muted:#566781; --rule:#D6DFEA;
+  --dot:#86A9C9; --dot-zero:#9AA8BA; --hi:#F2B200; --hi-ink:#16233A; --avg:#2D6A8E;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1622; --paper:#152131; --ink:#E5ECF5; --muted:#9DAEC3; --rule:#27384E;
+    --dot:#4F7DA6; --dot-zero:#6B7C92; --hi:#FFC72E; --hi-ink:#0E1622; --avg:#8CC2E3;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1622; --paper:#152131; --ink:#E5ECF5; --muted:#9DAEC3; --rule:#27384E;
+  --dot:#4F7DA6; --dot-zero:#6B7C92; --hi:#FFC72E; --hi-ink:#0E1622; --avg:#8CC2E3;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"IBM Plex Sans KR",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;
+  font-size:17px;line-height:1.75;word-break:keep-all;-webkit-text-size-adjust:100%}
+main{max-width:760px;margin:0 auto;padding:40px 20px 72px}
+h1{font-size:clamp(15px,3.6vw,17px);font-weight:500;color:var(--muted);margin:0 0 28px;line-height:1.5}
+h2{font-size:clamp(21px,4.6vw,26px);line-height:1.4;margin:0 0 10px;font-weight:700}
+p{margin:0 0 14px}
+section{padding:44px 0;border-top:1px solid var(--rule)}
+section:first-of-type{border-top:0;padding-top:0}
+.pick{display:flex;flex-direction:column;gap:8px;margin-bottom:22px}
+.pick label{font-size:15px;color:var(--muted)}
+select{font:inherit;font-size:18px;color:var(--ink);background:var(--paper);border:2px solid var(--ink);border-radius:10px;
+  padding:10px 40px 10px 14px;max-width:100%;appearance:none;-webkit-appearance:none;
+  background-image:linear-gradient(45deg,transparent 50%,var(--ink) 50%),linear-gradient(135deg,var(--ink) 50%,transparent 50%);
+  background-position:calc(100% - 20px) 52%,calc(100% - 14px) 52%;background-size:6px 6px;background-repeat:no-repeat}
+select:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid var(--hi);outline-offset:2px}
+.say{font-size:clamp(25px,6.4vw,42px);line-height:1.45;font-weight:700;letter-spacing:-0.01em;margin:0 0 14px}
+.say .n{font-variant-numeric:tabular-nums;background:linear-gradient(transparent 62%,color-mix(in srgb,var(--hi) 70%,transparent) 62%);padding:0 2px}
+.say .place{white-space:nowrap}
+.detail{color:var(--muted);font-size:16px}
+.chart-wrap{position:relative;margin:18px -4px 6px}
+svg{display:block;overflow:visible}
+.axis text{fill:var(--muted);font-size:12px;font-family:inherit}
+.axis line,.axis path{stroke:var(--rule)}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);font-size:14px;line-height:1.4;padding:6px 10px;border-radius:8px;white-space:nowrap;opacity:0;transform:translate(-50%,-110%)}
+.caption{font-size:14px;color:var(--muted)}
+.zero-count{font-size:clamp(19px,4.4vw,22px);font-weight:700;margin-bottom:16px}
+.zero{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:2px 24px}
+.zero li{display:flex;flex-direction:column;padding:10px 0;border-bottom:1px dashed var(--rule);font-size:16px;line-height:1.45}
+.zero li span:last-child{color:var(--muted);font-variant-numeric:tabular-nums;font-size:14px}
+.zero li.on{font-weight:700}
+.zero li.on span:first-child{align-self:flex-start;background:linear-gradient(transparent 60%,color-mix(in srgb,var(--hi) 70%,transparent) 60%)}
+.seg{display:inline-flex;border:2px solid var(--ink);border-radius:10px;overflow:hidden;margin:8px 0 16px;max-width:100%}
+.seg button{font:inherit;font-size:15px;font-weight:700;border:0;background:var(--paper);color:var(--ink);padding:9px 14px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:16px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:9px 8px;border-bottom:1px dashed var(--rule);white-space:nowrap}
+th{font-size:13px;font-weight:500;color:var(--muted);border-bottom:1px solid var(--rule)}
+td.num,th.num{text-align:right}
+td .sd{display:block;white-space:normal;font-size:13px;color:var(--muted)}
+@media (max-width:480px){table{font-size:15px}th,td{padding:8px 4px}td .sd{font-size:12px}.seg button{font-size:14px;padding:8px 10px}}
+tr.on td{background:color-mix(in srgb,var(--hi) 22%,transparent)}
+dl{margin:0}
+dt{font-weight:700;margin-top:18px}
+dd{margin:4px 0 0;color:var(--ink)}
+.notes li{margin-bottom:10px}
+.notes{padding-left:20px;margin:8px 0 0}
+.dl{display:inline-flex;align-items:center;gap:8px;margin-top:22px;font:inherit;font-size:16px;font-weight:700;color:var(--hi-ink);background:var(--hi);border:0;border-radius:10px;padding:12px 18px;cursor:pointer}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+  <section id="mine">
+    <h1>시군구별 어린이(0~14세) 1만 명당 소아청소년과 전문의 수 · 2026년 9월</h1>
+    <div class="pick">
+      <label for="sel">우리 동네 고르기</label>
+      <select id="sel"><option value="">시군구를 고르세요</option></select>
+    </div>
+    <p class="say" id="say" aria-live="polite"></p>
+    <p class="detail" id="detail"></p>
+  </section>
+
+  <section id="dots">
+    <h2 id="dots-title"></h2>
+    <p class="caption" id="dots-cap"></p>
+    <div class="chart-wrap" id="chart"><div class="tip" id="tip"></div></div>
+    <p class="caption">점 하나가 시군구 하나입니다. 가로축은 어린이 1만 명당 전문의 수이며, 값이 작은 쪽을 넓게 보이도록 제곱근 눈금을 썼습니다. 점을 누르면 그 시군구가 선택됩니다.</p>
+  </section>
+
+  <section id="bottom">
+    <h2>하위 10곳</h2>
+    <p id="bottom-note"></p>
+    <div class="seg" role="group" aria-label="하위 10곳 기준">
+      <button type="button" data-k="a" aria-pressed="true">1명 이상 중 하위</button>
+      <button type="button" data-k="b" aria-pressed="false">0명 중 어린이 많은 순</button>
+    </div>
+    <div class="tbl-wrap"><table id="bottom-tbl"></table></div>
+    <p class="caption" id="bottom-cap"></p>
+  </section>
+
+  <section id="zeros">
+    <h2>소아청소년과 전문의가 없는 곳</h2>
+    <p class="zero-count" id="zero-count"></p>
+    <ul class="zero" id="zero-list"></ul>
+  </section>
+
+  <section id="about">
+    <h2>출처와 기준일, 그리고 한계</h2>
+    <dl>
+      <dt>전문의 수</dt>
+      <dd>건강보험심사평가원 「병원정보서비스」와 「의료기관별상세정보서비스 – 진료과목정보」, 2026년 9월 공개 파일. 진료과목코드 11(소아청소년과)의 ‘과목별 전문의수’를 기관별로 더한 뒤, 암호화요양기호로 병원정보와 연결해 주소의 앞 두 단어로 시군구를 정했습니다.</dd>
+      <dt>어린이 수</dt>
+      <dd>통계청 KOSIS 「행정구역(읍면동)별/5세별 주민등록인구」, 2026년 9월. 0~4세, 5~9세, 10~14세 총인구수를 더했습니다.</dd>
+      <dt>지역 기준</dt>
+      <dd>광주광역시·전라남도 주소는 전남광주통합특별시로 묶었고, 세종특별자치시는 하나의 지역으로 셌습니다. 경기 북부출장소와 강원 동해출장소 행은 집계에서 뺐습니다. 일반구가 있는 시(예: 수원시)는 시 단위로 봅니다.</dd>
+    </dl>
+    <ul class="notes">
+      <li>전문의는 <b>일하는 곳</b> 기준이고 어린이는 <b>사는 곳</b> 기준입니다. 대학병원이 모인 도심 구는 값이 크게 나오고, 이웃 지역 어린이까지 진료하는 몫은 반영되지 않습니다.</li>
+      <li>어린이가 적은 지역은 전문의 한두 명만으로 값과 순위가 크게 달라집니다.</li>
+      <li>소아청소년과는 18세까지 진료하지만, 여기서 ‘어린이’는 0~14세만 셌습니다.</li>
+      <li>‘과목별 전문의수’는 기관이 신고한 진료과목 기준입니다. 소아청소년과를 진료과목으로 올리지 않은 기관의 전문의는 빠지고, 실제 진료 시간이나 근무 형태(상근·비상근)는 알 수 없습니다.</li>
+      <li>0명은 ‘해당 지역에 소아청소년과 진료과목으로 신고된 전문의가 없다’는 뜻이며, 소아 진료가 전혀 없다는 뜻은 아닙니다.</li>
+      <li>순위는 반올림하기 전 값으로 매겼고, 같은 값은 공동 순위입니다. 화면의 값은 소수 둘째 자리에서 반올림했습니다.</li>
+    </ul>
+    <a class="dl" href="README.md" download>README.md 내려받기</a>
+  </section>
+</main>
+<script>
+const RAW = [["서울특별시", "종로구", 108, 8905], ["서울특별시", "중구", 8, 7457], ["서울특별시", "용산구", 28, 15672], ["서울특별시", "성동구", 38, 23738], ["서울특별시", "광진구", 27, 23731], ["서울특별시", "동대문구", 44, 28847], ["서울특별시", "중랑구", 39, 26941], ["서울특별시", "성북구", 60, 36296], ["서울특별시", "강북구", 18, 17047], ["서울특별시", "도봉구", 21, 20866], ["서울특별시", "노원구", 52, 41882], ["서울특별시", "은평구", 42, 34691], ["서울특별시", "서대문구", 90, 25046], ["서울특별시", "마포구", 26, 30007], ["서울특별시", "양천구", 46, 44313], ["서울특별시", "강서구", 79, 44995], ["서울특별시", "구로구", 70, 31462], ["서울특별시", "금천구", 12, 13372], ["서울특별시", "영등포구", 43, 30392], ["서울특별시", "동작구", 47, 28450], ["서울특별시", "관악구", 28, 23125], ["서울특별시", "서초구", 112, 49560], ["서울특별시", "강남구", 177, 62224], ["서울특별시", "송파구", 137, 68238], ["서울특별시", "강동구", 62, 53906], ["전남광주통합특별시", "목포시", 26, 19363], ["전남광주통합특별시", "여수시", 16, 25179], ["전남광주통합특별시", "순천시", 28, 31067], ["전남광주통합특별시", "나주시", 10, 13714], ["전남광주통합특별시", "광양시", 10, 18377], ["전남광주통합특별시", "동구", 41, 10486], ["전남광주통합특별시", "서구", 44, 26516], ["전남광주통합특별시", "남구", 32, 23613], ["전남광주통합특별시", "북구", 46, 43960], ["전남광주통합특별시", "광산구", 52, 46691], ["전남광주통합특별시", "담양군", 0, 2926], ["전남광주통합특별시", "곡성군", 0, 1420], ["전남광주통합특별시", "구례군", 1, 1400], ["전남광주통합특별시", "고흥군", 1, 3086], ["전남광주통합특별시", "보성군", 0, 2076], ["전남광주통합특별시", "화순군", 9, 4437], ["전남광주통합특별시", "장흥군", 2, 2297], ["전남광주통합특별시", "강진군", 1, 2277], ["전남광주통합특별시", "해남군", 4, 4307], ["전남광주통합특별시", "영암군", 0, 3631], ["전남광주통합특별시", "무안군", 7, 12801], ["전남광주통합특별시", "함평군", 0, 1654], ["전남광주통합특별시", "영광군", 3, 5003], ["전남광주통합특별시", "장성군", 1, 3293], ["전남광주통합특별시", "완도군", 1, 3397], ["전남광주통합특별시", "진도군", 2, 1920], ["전남광주통합특별시", "신안군", 0, 2545], ["부산광역시", "중구", 4, 1216], ["부산광역시", "서구", 31, 7243], ["부산광역시", "동구", 21, 5475], ["부산광역시", "영도구", 9, 6204], ["부산광역시", "부산진구", 46, 29931], ["부산광역시", "동래구", 35, 30128], ["부산광역시", "남구", 25, 23180], ["부산광역시", "북구", 28, 22601], ["부산광역시", "해운대구", 61, 36900], ["부산광역시", "사하구", 30, 21975], ["부산광역시", "금정구", 14, 14632], ["부산광역시", "강서구", 20, 28016], ["부산광역시", "연제구", 25, 20745], ["부산광역시", "수영구", 18, 12968], ["부산광역시", "사상구", 13, 13173], ["부산광역시", "기장군", 20, 22538], ["대구광역시", "중구", 26, 12227], ["대구광역시", "동구", 41, 31432], ["대구광역시", "서구", 13, 11457], ["대구광역시", "남구", 43, 9321], ["대구광역시", "북구", 75, 38435], ["대구광역시", "수성구", 57, 47726], ["대구광역시", "달서구", 64, 49312], ["대구광역시", "달성군", 22, 34054], ["대구광역시", "군위군", 0, 764], ["인천광역시", "제물포구", 36, 6433], ["인천광역시", "영종구", 5, 18984], ["인천광역시", "미추홀구", 39, 38232], ["인천광역시", "연수구", 43, 56553], ["인천광역시", "남동구", 51, 43017], ["인천광역시", "부평구", 48, 43171], ["인천광역시", "계양구", 25, 20646], ["인천광역시", "서해구", 42, 45788], ["인천광역시", "검단구", 35, 43731], ["인천광역시", "강화군", 3, 4396], ["인천광역시", "옹진군", 0, 837], ["대전광역시", "동구", 18, 18548], ["대전광역시", "중구", 37, 20209], ["대전광역시", "서구", 72, 49314], ["대전광역시", "유성구", 62, 48345], ["대전광역시", "대덕구", 11, 13007], ["울산광역시", "중구", 16, 20312], ["울산광역시", "남구", 33, 31702], ["울산광역시", "동구", 21, 16423], ["울산광역시", "북구", 22, 29330], ["울산광역시", "울주군", 11, 21124], ["세종특별자치시", "세종특별자치시", 63, 65245], ["경기도", "수원시", 174, 123542], ["경기도", "성남시", 156, 92887], ["경기도", "의정부시", 42, 45035], ["경기도", "안양시", 62, 58905], ["경기도", "부천시", 85, 66138], ["경기도", "광명시", 45, 32560], ["경기도", "평택시", 57, 77113], ["경기도", "동두천시", 5, 6655], ["경기도", "안산시", 69, 51348], ["경기도", "고양시", 122, 105292], ["경기도", "과천시", 7, 12651], ["경기도", "구리시", 22, 17928], ["경기도", "남양주시", 65, 82074], ["경기도", "오산시", 27, 31634], ["경기도", "시흥시", 52, 62993], ["경기도", "군포시", 24, 21653], ["경기도", "의왕시", 15, 18429], ["경기도", "하남시", 43, 43358], ["경기도", "용인시", 100, 128491], ["경기도", "파주시", 45, 66588], ["경기도", "이천시", 15, 23768], ["경기도", "안성시", 13, 18358], ["경기도", "김포시", 59, 65574], ["경기도", "화성시", 124, 149406], ["경기도", "광주시", 32, 44424], ["경기도", "양주시", 23, 37012], ["경기도", "포천시", 10, 9756], ["경기도", "여주시", 5, 9075], ["경기도", "연천군", 1, 3111], ["경기도", "가평군", 0, 4188], ["경기도", "양평군", 3, 10065], ["강원특별자치도", "춘천시", 40, 29165], ["강원특별자치도", "원주시", 43, 39955], ["강원특별자치도", "강릉시", 25, 17564], ["강원특별자치도", "동해시", 5, 8165], ["강원특별자치도", "태백시", 2, 2722], ["강원특별자치도", "속초시", 8, 7275], ["강원특별자치도", "삼척시", 3, 4510], ["강원특별자치도", "홍천군", 2, 4721], ["강원특별자치도", "횡성군", 1, 2709], ["강원특별자치도", "영월군", 2, 2153], ["강원특별자치도", "평창군", 0, 2241], ["강원특별자치도", "정선군", 1, 1892], ["강원특별자치도", "철원군", 2, 3573], ["강원특별자치도", "화천군", 2, 1979], ["강원특별자치도", "양구군", 2, 1922], ["강원특별자치도", "인제군", 2, 2934], ["강원특별자치도", "고성군", 0, 1947], ["강원특별자치도", "양양군", 0, 1858], ["충청북도", "청주시", 102, 98855], ["충청북도", "충주시", 12, 18534], ["충청북도", "제천시", 5, 10620], ["충청북도", "보은군", 1, 1728], ["충청북도", "옥천군", 1, 3191], ["충청북도", "영동군", 1, 2417], ["충청북도", "증평군", 1, 3818], ["충청북도", "진천군", 5, 9693], ["충청북도", "괴산군", 1, 1774], ["충청북도", "음성군", 6, 7663], ["충청북도", "단양군", 0, 1373], ["충청남도", "천안시", 83, 75227], ["충청남도", "공주시", 6, 6607], ["충청남도", "보령시", 6, 6835], ["충청남도", "아산시", 31, 49882], ["충청남도", "서산시", 9, 18016], ["충청남도", "논산시", 5, 8310], ["충청남도", "계룡시", 2, 6049], ["충청남도", "당진시", 7, 19503], ["충청남도", "금산군", 1, 3032], ["충청남도", "부여군", 1, 3233], ["충청남도", "서천군", 1, 2587], ["충청남도", "청양군", 0, 1520], ["충청남도", "홍성군", 9, 10701], ["충청남도", "예산군", 2, 5645], ["충청남도", "태안군", 1, 3481], ["전북특별자치도", "전주시", 93, 66380], ["전북특별자치도", "군산시", 21, 25547], ["전북특별자치도", "익산시", 29, 23515], ["전북특별자치도", "정읍시", 7, 7640], ["전북특별자치도", "남원시", 5, 5751], ["전북특별자치도", "김제시", 4, 5944], ["전북특별자치도", "완주군", 11, 9810], ["전북특별자치도", "진안군", 1, 1435], ["전북특별자치도", "무주군", 2, 1355], ["전북특별자치도", "장수군", 0, 1276], ["전북특별자치도", "임실군", 1, 1543], ["전북특별자치도", "순창군", 0, 1884], ["전북특별자치도", "고창군", 1, 3181], ["전북특별자치도", "부안군", 2, 2957], ["경상북도", "포항시", 43, 50579], ["경상북도", "경주시", 16, 19845], ["경상북도", "김천시", 7, 12417], ["경상북도", "안동시", 14, 12828], ["경상북도", "구미시", 46, 48606], ["경상북도", "영주시", 2, 7513], ["경상북도", "영천시", 5, 6587], ["경상북도", "상주시", 4, 6165], ["경상북도", "문경시", 2, 4523], ["경상북도", "경산시", 22, 24642], ["경상북도", "의성군", 2, 2122], ["경상북도", "청송군", 1, 1184], ["경상북도", "영양군", 0, 786], ["경상북도", "영덕군", 2, 1679], ["경상북도", "청도군", 0, 1830], ["경상북도", "고령군", 0, 1538], ["경상북도", "성주군", 1, 2037], ["경상북도", "칠곡군", 6, 9401], ["경상북도", "예천군", 2, 5865], ["경상북도", "봉화군", 1, 1357], ["경상북도", "울진군", 1, 3454], ["경상북도", "울릉군", 1, 444], ["경상남도", "창원시", 106, 101909], ["경상남도", "진주시", 44, 35792], ["경상남도", "통영시", 8, 9984], ["경상남도", "사천시", 12, 9797], ["경상남도", "김해시", 59, 61448], ["경상남도", "밀양시", 5, 6522], ["경상남도", "거제시", 22, 27760], ["경상남도", "양산시", 76, 43289], ["경상남도", "의령군", 0, 1213], ["경상남도", "함안군", 0, 4073], ["경상남도", "창녕군", 1, 3256], ["경상남도", "고성군", 1, 2700], ["경상남도", "남해군", 2, 2128], ["경상남도", "하동군", 0, 1876], ["경상남도", "산청군", 0, 1403], ["경상남도", "함양군", 1, 2123], ["경상남도", "거창군", 4, 4847], ["경상남도", "합천군", 1, 1702], ["제주특별자치도", "제주시", 57, 58281], ["제주특별자치도", "서귀포시", 10, 19263]];
+
+// ---- compute everything from the raw counts ----
+const rows = RAW.map(([sido, sgg, ped, child], i) => ({ id: i, sido, sgg, ped, child, rate: ped / child * 10000, name: sido === sgg ? sido : sido + ' ' + sgg }));
+const N = rows.length;
+const sorted = rows.slice().sort((a, b) => b.rate - a.rate);
+sorted.forEach((d, i) => { d.rank = (i > 0 && d.rate === sorted[i - 1].rate) ? sorted[i - 1].rank : i + 1; });
+const tieCount = d3.rollup(rows, v => v.length, d => d.rank);
+const totPed = d3.sum(rows, d => d.ped), totChild = d3.sum(rows, d => d.child);
+const avg = totPed / totChild * 10000;
+const zeros = rows.filter(d => d.ped === 0);
+
+const f2v = d3.format(',.2f'), f2 = v => v === 0 ? '0' : f2v(v), f0 = d3.format(',');
+const josa = (w, a, b) => { const c = w.charCodeAt(w.length - 1); return (c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28) ? a : b; };
+const esc = s => String(s).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+
+// ---- picker ----
+const sel = document.getElementById('sel');
+d3.groups(rows, d => d.sido).forEach(([sido, list]) => {
+  const g = document.createElement('optgroup'); g.label = sido;
+  list.forEach(d => { const o = document.createElement('option'); o.value = d.id; o.textContent = d.sgg; g.append(o); });
+  sel.append(g);
+});
+
+let current = null;
+function setSay(d) {
+  const say = document.getElementById('say'), det = document.getElementById('detail');
+  if (!d) {
+    say.innerHTML = '전국은 어린이 1만 명당 소아청소년과 전문의 <span class="n">' + f2(avg) + '</span>명입니다.';
+    det.textContent = '전국 0~14세 ' + f0(totChild) + '명, 소아청소년과 전문의 ' + f0(totPed) + '명 기준. 위에서 시군구를 고르면 그 지역의 값과 순위를 보여 드립니다.';
+    return;
+  }
+  const tie = tieCount.get(d.rank) > 1 ? '공동 ' : '';
+  say.innerHTML = '<span class="place">' + esc(d.name) + '</span>' + josa(d.name, '은', '는') +
+    ' 어린이 1만 명당 전문의 <span class="n">' + f2(d.rate) + '</span>명, ' + N + '곳 중 <span class="n">' + tie + d.rank + '</span>위입니다.';
+  const cmp = d.rate >= avg ? '전국 평균(' + f2(avg) + '명)보다 ' + f2(d.rate - avg) + '명 많습니다.' : '전국 평균(' + f2(avg) + '명)보다 ' + f2(avg - d.rate) + '명 적습니다.';
+  det.textContent = '소아청소년과 전문의 ' + f0(d.ped) + '명, 0~14세 어린이 ' + f0(d.child) + '명. ' + cmp;
+}
+
+// ---- dot chart ----
+document.getElementById('dots-title').textContent = N + '개 시군구를 한 줄에 놓으면';
+const top1 = sorted[0];
+document.getElementById('dots-cap').textContent = '가장 높은 곳은 ' + top1.name + '(' + f2(top1.rate) + '명), 전국 평균은 ' + f2(avg) + '명, 전문의가 없는 곳은 ' + zeros.length + '곳입니다.';
+
+const wrap = document.getElementById('chart'), tip = document.getElementById('tip');
+let svg, x, dots, placed, hiG;
+
+function dodge(data, r, xs) {
+  const pad = 0.6, out = [], sortedX = data.map(d => ({ d, x: xs(d.rate) })).sort((a, b) => a.x - b.x);
+  const active = [];
+  for (const p of sortedX) {
+    while (active.length && active[0].x < p.x - 2 * r - pad) active.shift();
+    let y = 0;
+    for (let k = 0; ; k++) {
+      const cand = k === 0 ? 0 : (k % 2 ? 1 : -1) * Math.ceil(k / 2) * (r * 0.5);
+      if (!active.some(q => (q.x - p.x) ** 2 + (q.y - cand) ** 2 < (2 * r + pad) ** 2)) { y = cand; break; }
+      if (k > 4000) break;
+    }
+    const item = { d: p.d, x: p.x, y };
+    active.push(item); active.sort((a, b) => a.x - b.x);
+    out.push(item);
+  }
+  return out;
+}
+
+function draw() {
+  const W = wrap.clientWidth, small = W < 560, r = small ? 3.6 : 4.6;
+  const m = { l: 10, r: small ? 14 : 18 };
+  x = d3.scaleSqrt().domain([0, d3.max(rows, d => d.rate)]).range([m.l, W - m.r]).nice();
+  placed = dodge(rows, r, x);
+  const ext = d3.extent(placed, p => p.y), mid = 90 + Math.max(-ext[0], 0) + r;
+  const H = mid + ext[1] + r + 40;
+  d3.select(wrap).select('svg').remove();
+  svg = d3.select(wrap).insert('svg', '.tip').attr('width', W).attr('height', H).attr('role', 'img')
+    .attr('aria-label', N + '개 시군구의 어린이 1만 명당 소아청소년과 전문의 수 분포');
+  const ticks = (small ? [0, 10, 25, 50, 100] : [0, 5, 10, 20, 40, 60, 80, 100, 120]).filter(t => t <= x.domain()[1]);
+  svg.append('g').attr('class', 'axis').attr('transform', 'translate(0,' + (H - 26) + ')')
+    .call(d3.axisBottom(x).tickValues(ticks).tickSize(-(H - 70)).tickFormat(d3.format('d')))
+    .call(g => g.select('.domain').remove()).call(g => g.selectAll('line').attr('stroke-dasharray', '2 4'));
+  // national average
+  const ax = x(avg);
+  svg.append('line').attr('x1', ax).attr('x2', ax).attr('y1', 46).attr('y2', H - 26).attr('stroke', 'var(--avg)').attr('stroke-width', 2);
+  svg.append('text').attr('x', ax + 6).attr('y', 58).attr('fill', 'var(--avg)').attr('font-size', 13).attr('font-weight', 700)
+    .text('전국 평균 ' + f2(avg));
+  dots = svg.append('g').selectAll('circle').data(placed).join('circle')
+    .attr('cx', p => p.x).attr('cy', p => mid + p.y).attr('r', r)
+    .attr('fill', p => p.d.ped === 0 ? 'none' : 'var(--dot)')
+    .attr('stroke', p => p.d.ped === 0 ? 'var(--dot-zero)' : 'none').attr('stroke-width', 1.5)
+    .style('cursor', 'pointer')
+    .on('pointerenter', (e, p) => showTip(p, mid))
+    .on('pointerleave', () => { tip.style.opacity = 0; })
+    .on('click', (e, p) => { sel.value = p.d.id; choose(p.d); });
+  hiG = svg.append('g');
+  svg._mid = mid;
