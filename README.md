@@ -1,3 +1,5 @@
+   ## 👉 [사이트 바로 보기](https://news119.github.io/pediatric-data/)
+
 [README.md](https://github.com/user-attachments/files/34469612/README.md)
 # 시군구별 어린이 1만 명당 소아청소년과 전문의 수 (2026년 9월)
 
